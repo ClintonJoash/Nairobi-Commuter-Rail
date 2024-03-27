@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking</title>
+</head>
+<body>
+    <h1>Booking</h1>
+    
+    <!-- Dropdown for selecting routes -->
+    <label for="route">Select Route:</label>
+    <select id="route" onchange="populateStopsDropdown(this.value)">
+        <option value="" disabled selected>Select Route</option>
+        <option value="Nairobi-Embakasi village">Nairobi-Embakasi village</option>
+        <option value="Nairobi-Syokimau">Nairobi-Syokimau</option>
+        <option value="Nairobi-Ruiru">Nairobi-Ruiru</option>
+        <option value="Nairobi-Limuru">Nairobi-Limuru</option>
+        <option value="Nairobi-Lukenya">Nairobi-Lukenya</option>
+    </select>
+    
+    <!-- Dropdown for selecting stops -->
+    <label for="stop">Select Stop:</label>
+    <select id="stop">
+        <option value="" disabled selected>Select Stop</option>
+    </select>
+    
+    <!-- Display stop fare -->
+    <p id="stopFare"></p>
+    
+    <!-- Display route fare -->
+    <p id="routeFare"></p>
+    
+    <!-- Submit button -->
+    <button onclick="bookTicket()">Book Ticket</button>
+
+    <!-- Add a "Make Payment" button -->
+    <button onclick="MakePayment()">Make Payment</button>
+
+    <form action="/payment" method="GET">
+        <button type="submit">Make Payment</button>
+    </form>
+
+    <script>
+        // Define a dictionary mapping routes to stops and fares
+        var routeStops = {
+            'Nairobi-Embakasi village': {
+                stops: ['Makadara', 'Donholm', 'Pipeline'],
+                fare: 100
+            },
+            'Nairobi-Syokimau': {
+                stops: ['Makadara', 'Imara Daima', 'Nairobi terminus'],
+                fare: 120
+            },
+            'Nairobi-Ruiru': {
+                stops: ['Makadara', 'Dandora', 'Mwiki', 'Githurai', 'Kahawa west'],
+                fare: 130
+            },
+            'Nairobi-Limuru': {
+                stops: ['Kibera', 'Dagoreti', 'Kikuyu'],
+                fare: 140
+            },
+            'Nairobi-Lukenya': {
+                stops: ['Makadara', 'Imara Daima', 'Embakasi', 'Mlolongo', 'Arthi river', 'Kitengela'],
+                fare: 150
+            }
+        };
+
+        // Function to populate stops dropdown with fare information
+function populateStopsDropdown(route) {
+    var stopDropdown = document.getElementById('stop');
+    // Clear previous options
+    stopDropdown.innerHTML = '<option value="" disabled selected>Select Stop</option>';
+    // Get the stops array and fare for the selected route
+    var stops = routeStops[route].stops;
+    var totalFare = routeStops[route].fare;
+    // Calculate fare per stop
+    var totalStops = stops.length;
+    var baseFare = totalFare / totalStops; // Base fare for each stop
+    // Populate with new options
+    stops.forEach(function(stop, index) {
+        // Calculate fare for current stop
+        var stopFare = baseFare * (index + 1); // Fare decreases as stop moves further from origin
+        // Append fare to stop name
+        var optionText = `${stop} (Ksh ${stopFare.toFixed(2)})`; // Include fare in the option text
+        var option = document.createElement('option');
+        option.value = stop;
+        option.textContent = optionText;
+        stopDropdown.appendChild(option);
+    });
+    // Display route fare
+    document.getElementById('routeFare').textContent = `Route Fare: Ksh ${totalFare.toFixed(2)}`;
+}
+
+      // Function to book ticket
+      function bookTicket() {
+    // Retrieve selected route and stop
+    var route = document.getElementById('route').value;
+    var stopDropdown = document.getElementById('stop');
+    var stopIndex = stopDropdown.selectedIndex;
+    var stopOption = stopDropdown.options[stopIndex];
+    var stop = stopOption.value;
+    // Retrieve fare for selected stop
+    var fare = parseFloat(stopOption.textContent.match(/\d+\.\d+/)[0]); // Extract fare from option text
+    // Display booking information
+    var bookingInfo = `You have booked a ticket for ${route} with stop at ${stop}. The fare for this stop is Ksh ${fare.toFixed(2)}.`;
+    alert(bookingInfo);
+    // Display stop fare on the screen
+    document.getElementById('stopFare').textContent = `Stop Fare: Ksh ${fare.toFixed(2)}`;
+
+    // Function to handle making payment
+function MakePayment() {
+    // Redirect to the payment page
+    window.location.href = "/payment";
+}
+
+}
+    </script>
+</body>
+</html>

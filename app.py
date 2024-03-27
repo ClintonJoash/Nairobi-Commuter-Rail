@@ -67,9 +67,21 @@ def login():
     conn.close()
     
     if commuter:
-        return 'Login successful! <a href="/">Back to Home</a>'
+        return redirect(url_for('booking'))
     else:
         return 'Error: Commuter not found <a href="/">Back to Home</a>'
+
+# Route to display the booking page
+@app.route('/booking')
+def booking():
+    return render_template('booking.html')
+
+# Route to display the payment page
+@app.route('/payment')
+def payment():
+    # Render the payment.html template
+    return render_template('payment.html')
+
 
 if __name__ == '__main__':
     app.run(debug=True)
