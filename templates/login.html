@@ -4,16 +4,34 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <div class="container">
+    <header>
         <h1>Login</h1>
-        <form action="/login" method="post">
-            <label for="contact_info">Contact Info:</label><br>
-            <input type="tel" id="contact_info" name="contact_info" required pattern="[0-9]{10}"><br>
-            <input type="submit" value="Login">
+    </header>
+    <div class="container">
+        <form method="POST" action="{{ url_for('login') }}">
+            <label for="name">Name</label>
+            <input type="text" id="name" name="name" required>
+            
+            <label for="contact_info">Telephone Number</label>
+            <input type="text" id="contact_info" name="contact_info" required>
+            
+            <input type="submit" value="Login" class="button">
         </form>
+        <div>
+            <p>Not registered? <a href="{{ url_for('register') }}">Register here</a>.</p>
+        </div>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flashes">
+                {% for category, message in messages %}
+                    <li class="{{ category }}">{{ message }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
     </div>
 </body>
 </html>

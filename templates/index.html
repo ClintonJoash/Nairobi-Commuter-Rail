@@ -1,25 +1,21 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Commuter Rail System</title>
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <title>Home</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <div class="container">
-        <div class="header">
+    <header>
+        <div class="logo-container">
             <img src="{{ url_for('static', filename='logo.jpeg') }}" alt="Logo" class="logo">
         </div>
-        <h1>Welcome to the Commuter Rail System</h1>
-        <div class="links">
-            <ul>
-                <li><a href="/register">Register</a></li>
-                <li><a href="/login">Login</a></li>
-            </ul>
-        </div>
+        <h1>Welcome to Our Service</h1>
+    </header>
+    <div class="container">
+        <a href="{{ url_for('register') }}" class="button">Register</a>
+        <a href="{{ url_for('login') }}" class="button">Login</a>
     </div>
-    
 </body>
 </html>

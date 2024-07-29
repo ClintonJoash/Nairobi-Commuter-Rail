@@ -4,42 +4,32 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Payment</title>
-    <!-- Include any necessary CSS stylesheets -->
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <h1>Select Payment Method</h1>
-    
-    <!-- List of payment options -->
-    <div id="payment-options">
-        <button onclick="payWithCreditCard()">Pay with Credit Card</button>
-        <button onclick="payWithDebitCard()">Pay with Debit Card</button>
-        <button onclick="payWithMobileMoney()">Pay with Mobile Money</button>
-        <!-- Add other payment options as needed -->
+    <header>
+        <h1>Payment</h1>
+    </header>
+    <div class="container">
+        <h2>Choose Your Payment Method</h2>
+        <form id="paymentForm">
+            <label for="paymentOption">Payment Method:</label>
+            <select id="paymentOption" name="paymentOption">
+                <option value="" disabled selected>Select Payment Method</option>
+                <option value="creditCard">Credit Card</option>
+                <option value="debitCard">Debit Card</option>
+                <option value="mobileMoney">Mobile Money</option>
+            </select>
+            
+            <!-- Payment details for Mobile Money -->
+            <div id="mobileMoneyDetails" style="display:none;">
+                <label for="mobileNumber">Mobile Number:</label>
+                <input type="text" id="mobileNumber" name="mobileNumber" placeholder="e.g. 0712345678" maxlength="10">
+            </div>
+            
+            <button type="submit" class="button">Submit Payment</button>
+        </form>
     </div>
-
-    <!-- Include any necessary JavaScript code -->
-    <script>
-        // Function to handle payment with Credit Card
-        function payWithCreditCard() {
-            // Your Credit Card payment processing code here
-            // For demonstration purposes, we'll just log a message
-            console.log('Processing payment with Credit Card...');
-        }
-
-        // Function to handle payment with Debit Card
-        function payWithDebitCard() {
-            // Your Debit Card payment processing code here
-            // For demonstration purposes, we'll just log a message
-            console.log('Processing payment with Debit Card...');
-        }
-
-        // Function to handle payment with Mobile Money
-        function payWithMobileMoney() {
-            // Your Mobile Money payment processing code here
-            // For demonstration purposes, we'll just log a message
-            console.log('Processing payment with Mobile Money...');
-        }
-    </script>
+    <script src="{{ url_for('static', filename='payment.js') }}"></script>
 </body>
 </html>

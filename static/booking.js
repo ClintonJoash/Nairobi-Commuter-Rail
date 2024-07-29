@@ -1,4 +1,3 @@
-// Define a dictionary mapping routes to stops and fares
 var routeStops = {
     'Nairobi-Embakasi village': {
         stops: ['Makadara', 'Donholm', 'Pipeline'],
@@ -22,40 +21,57 @@ var routeStops = {
     }
 };
 
-// Function to populate stops dropdown with fare information
 function populateStopsDropdown(route) {
     var stopDropdown = document.getElementById('stop');
-    // Clear previous options
     stopDropdown.innerHTML = '<option value="" disabled selected>Select Stop</option>';
-    // Get the stops array and fare for the selected route
     var stops = routeStops[route].stops;
     var totalFare = routeStops[route].fare;
-    // Calculate fare per stop
-    var totalStops = stops.length;
-    var baseFare = totalFare / totalStops; // Base fare for each stop
-    // Populate with new options
+
     stops.forEach(function(stop, index) {
-        // Calculate fare for current stop
-        var stopFare = baseFare * (index + 1); // Fare decreases as stop moves further from origin
-        // Append fare to stop name
-        var optionText = `${stop} (Ksh ${stopFare.toFixed(2)})`; // Include fare in the option text
         var option = document.createElement('option');
         option.value = stop;
-        option.textContent = optionText;
+        option.textContent = stop;
         stopDropdown.appendChild(option);
     });
-    // Display route fare
-    document.getElementById('routeFare').textContent = `Route Fare: Ksh ${totalFare.toFixed(2)}`;
 }
 
-// Function to book ticket
-function bookTicket() {
-    // Retrieve selected route and stop
-    var route = document.getElementById('route').value;
-    var stop = document.getElementById('stop').value;
-    // Retrieve fare for selected stop
-    var fare = parseFloat(document.getElementById('stop').selectedOptions[0].text.match(/\d+\.\d+/)[0]); // Extract fare from option text
-    // Display booking information
-    var bookingInfo = `You have booked a ticket for ${route} with stop at ${stop}. The fare for this stop is Ksh ${fare.toFixed(2)}.`;
-    alert(bookingInfo);
+function calculateFare(route, stop) {
+    var stops = routeStops[route].stops;
+    var totalFare = routeStops[route].fare;
+    var stopIndex = stops.indexOf(stop);
+    var fare = totalFare * ((stopIndex + 1) / stops.length);
+    return fare.toFixed(2); // Round to 2 decimal places
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    var routeDropdown = document.getElementById('route');
+    var stopDropdown = document.getElementById('stop');
+    var fareInput = document.getElementById('fare');
+
+    routeDropdown.addEventListener('change', function() {
+        var selectedRoute = routeDropdown.value;
+        populateStopsDropdown(selectedRoute);
+        fareInput.value = ''; // Clear fare input when route changes
+    });
+
+    stopDropdown.addEventListener('change', function() {
+        var selectedRoute = routeDropdown.value;
+        var selectedStop = stopDropdown.value;
+        var fare = calculateFare(selectedRoute, selectedStop);
+        fareInput.value = fare;
+    });
+
+    document.getElementById('bookingForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        var selectedRoute = routeDropdown.value;
+        var selectedStop = stopDropdown.value;
+        var fare = fareInput.value;
+
+        if (selectedRoute && selectedStop && fare) {
+            localStorage.setItem('fare', fare);
+            window.location.href = '/payment';
+        } else {
+            alert('Please select a route and stop.');
+        }
+    });
+});
