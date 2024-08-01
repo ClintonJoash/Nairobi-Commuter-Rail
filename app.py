@@ -202,21 +202,21 @@ def initiate_payment(token, phone_number, fare):
     
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
     shortcode = '174379'
-    lipa_na_mpesa_online_passkey = 'YOUR_LIPA_NA_MPESA_ONLINE_PASSKEY'
+    lipa_na_mpesa_online_passkey = 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919'
     password = base64.b64encode((shortcode + lipa_na_mpesa_online_passkey + timestamp).encode()).decode('utf-8')
     
     payload = {
-        'BusinessShortCode': shortcode,
-        'Password': password,
+        'BusinessShortCode': 174379,
+        'Password': 'Safaricom999!*!', # type: ignore
         'Timestamp': timestamp,
         'TransactionType': 'CustomerPayBillOnline',
         'Amount': fare,
-        'PartyA': phone_number,
-        'PartyB': shortcode,
-        'PhoneNumber': phone_number,
-        'CallBackURL': 'https://example.com/callback',  # Update with your callback URL
-        'AccountReference': 'Test123',
-        'TransactionDesc': 'Payment for test'
+        'PartyA': 600977,
+        'PartyB': 600000,
+        'PhoneNumber': 254708374149,
+        'CallBackURL': 'https://127.0.0.1:5000',  # Update with your callback URL
+        'AccountReference': 'testapi',
+        'TransactionDesc': 'Payment for test',
     }
     
     response = requests.post(api_url, json=payload, headers=headers)
