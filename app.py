@@ -1,15 +1,13 @@
-import sqlite3
-from flask import Flask, render_template, request, redirect, url_for, session, send_file
-import requests
 import base64
+import requests
+import sqlite3
+from flask import Flask, render_template, request, redirect, url_for, session
 from datetime import datetime
-import csv
-import io
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # Set a secure secret key for session management
+app.secret_key = '6f64c4e71bf4f967ae9a85c281291083'
 
-# Function to initialize the database
+# Initialize the database
 def init_db():
     conn = sqlite3.connect('commuters.db')
     cursor = conn.cursor()
@@ -43,20 +41,16 @@ def init_db():
     conn.commit()
     conn.close()
 
-# Initialize the database when the application starts
 init_db()
 
-# Route to display the homepage with options to log in or sign up
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# Route to display the registration form
 @app.route('/register', methods=['GET'])
 def register_form():
     return render_template('register.html')
 
-# Route to handle the registration form submission
 @app.route('/register', methods=['POST'])
 def register():
     name = request.form['name']
@@ -73,12 +67,10 @@ def register():
         conn.close()
         return 'Error: Commuter already registered <a href="/">Back to Home</a>'
 
-# Route to display the login form
 @app.route('/login', methods=['GET'])
 def login_form():
     return render_template('login.html')
 
-# Route to handle the login form submission
 @app.route('/login', methods=['POST'])
 def login():
     name = request.form.get('name')
@@ -94,8 +86,6 @@ def login():
     
     if commuter:
         session['user_id'] = commuter[0]
-        
-        # Record the successful login
         cursor.execute('INSERT INTO login_attempts (user_id) VALUES (?)', (commuter[0],))
         conn.commit()
         conn.close()
@@ -105,7 +95,6 @@ def login():
         conn.close()
         return render_template('login.html', error='Invalid credentials')
 
-# Route to display the booking page
 @app.route('/booking', methods=['GET', 'POST'])
 def booking():
     if request.method == 'POST':
@@ -116,7 +105,6 @@ def booking():
         if not route or not stop or not fare:
             return render_template('booking.html', error='All fields are required.')
 
-        # Save booking info to the database
         conn = sqlite3.connect('commuters.db')
         cursor = conn.cursor()
         cursor.execute('INSERT INTO bookings (user_id, route, stop, fare) VALUES (?, ?, ?, ?)', 
@@ -128,7 +116,6 @@ def booking():
     
     return render_template('booking.html')
 
-# Route to display the payment page
 @app.route('/payment', methods=['GET', 'POST'])
 def payment():
     if request.method == 'POST':
@@ -137,12 +124,17 @@ def payment():
         if not phone_number or not phone_number.isdigit() or len(phone_number) != 10 or not (phone_number.startswith('07') or phone_number.startswith('01')):
             return render_template('payment.html', error='Invalid phone number.')
         
-        # Make payment request to Safaricom API
         try:
             token = get_access_token()
             response = initiate_payment(token, phone_number)
+            
             if response.status_code == 200:
-                return render_template('payment.html', message='Payment request successful. Please check your phone.')
+                response_data = response.json()
+                if response_data.get("ResponseCode") == "0":
+                    return render_template('payment.html', message='Payment request successful. Please check your phone.')
+                else:
+                    error_message = response_data.get("ResponseDescription", "Payment request failed.")
+                    return render_template('payment.html', error=error_message)
             else:
                 return render_template('payment.html', error='Payment request failed.')
         except Exception as e:
@@ -151,7 +143,6 @@ def payment():
     fare = request.args.get('fare', '')
     return render_template('payment.html', fare=fare)
 
-# Function to get access token from Safaricom API
 def get_access_token():
     consumer_key = '5LyZXmj0n4SJADkXLtskKv4wd0BocvkuuI0aZmZGTGVVl88f'
     consumer_secret = 'QvAy9gmLz80hA65ZF1HzDstxe2LXJmBGAZoz3uOXkwiWlNVDvTHKuaEKaGROGV38'
@@ -166,48 +157,28 @@ def get_access_token():
     response_data = response.json()
     return response_data['access_token']
 
-# Function to initiate payment request to Safaricom API
 def initiate_payment(token, phone_number):
-    api_url = 'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest'
+    api_url = 'https://sandbox.safaricom.co.ke/mpesa/c2b/v1/simulate'
     headers = {
         'Authorization': 'Bearer ' + token,
         'Content-Type': 'application/json'
     }
     
     payload = {
-        'BusinessShortCode': '174379',
-        'Password': 'your_password',  # This is a placeholder. Replace with actual password.
-        'Timestamp': datetime.now().strftime('%Y%m%d%H%M%S'),
-        'TransactionType': 'CustomerPayBillOnline',
-        'Amount': '1',  # Replace with the actual amount
-        'PartyA': phone_number,
-        'PartyB': '174379',
-        'PhoneNumber': phone_number,
-        'CallBackURL': 'https://example.com/callback',
-        'AccountReference': 'Test123',
-        'TransactionDesc': 'Payment for test'
+        "ShortCode": "600984",
+        "CommandID": "CustomerBuyGoodsOnline",
+        "amount": "1",
+        "MSISDN": phone_number,
+        "BillRefNumber": ""
     }
     
     response = requests.post(api_url, json=payload, headers=headers)
-    return response
-
-# Route to generate and download the report
-@app.route('/generate_report')
-def generate_report():
-    conn = sqlite3.connect('commuters.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT c.name, c.contact_info, l.login_time FROM login_attempts l JOIN commuters c ON l.user_id = c.id')
-    login_attempts = cursor.fetchall()
-    conn.close()
-
-    # Generate CSV file
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(['Name', 'Contact Info', 'Login Time'])
-    writer.writerows(login_attempts)
-    output.seek(0)
     
-    return send_file(io.BytesIO(output.getvalue().encode()), mimetype='text/csv', attachment_filename='login_attempts_report.csv', as_attachment=True)
+    # Print the response for debugging
+    print(response.status_code)
+    print(response.text)
+    
+    return response
 
 if __name__ == '__main__':
     app.run(debug=True)

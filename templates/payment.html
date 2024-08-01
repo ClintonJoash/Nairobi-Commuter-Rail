@@ -29,6 +29,11 @@
             
             <button type="submit" class="button">Submit Payment</button>
         </form>
+        <div class="payment-options">
+            <img src="{{ url_for('static', filename='credit_card.png') }}" alt="Credit Card" id="creditCardImage">
+            <img src="{{ url_for('static', filename='debit_card.png') }}" alt="Debit Card" id="debitCardImage">
+            <img src="{{ url_for('static', filename='mobile_money.png') }}" alt="Mobile Money" id="mobileMoneyImage">
+        </div>
     </div>
     <script src="{{ url_for('static', filename='payment.js') }}"></script>
 </body>

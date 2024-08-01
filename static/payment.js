@@ -1,6 +1,11 @@
 document.addEventListener('DOMContentLoaded', function() {
     const paymentOption = document.getElementById('paymentOption');
     const mobileMoneyDetails = document.getElementById('mobileMoneyDetails');
+    const paymentImages = {
+        creditCard: document.getElementById('creditCardImage'),
+        debitCard: document.getElementById('debitCardImage'),
+        mobileMoney: document.getElementById('mobileMoneyImage')
+    };
 
     // Show mobile money details when Mobile Money is selected
     paymentOption.addEventListener('change', function() {
@@ -9,6 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             mobileMoneyDetails.style.display = 'none';
         }
+        updateSelectedImage(paymentOption.value);
     });
 
     // Handle form submission
@@ -56,5 +62,11 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error:', error);
             alert('An error occurred while processing your payment. Please try again.');
         });
+    }
+
+    function updateSelectedImage(selectedMethod) {
+        for (let method in paymentImages) {
+            paymentImages[method].style.opacity = (method === selectedMethod) ? '1' : '0.5';
+        }
     }
 });
