@@ -194,7 +194,7 @@ def get_access_token():
 
 # Function to initiate payment request to Safaricom API
 def initiate_payment(token, phone_number, fare):
-    api_url = 'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest'
+    api_url = ' https://sandbox.safaricom.co.ke/mpesa/c2b/v1/registerurl'
     headers = {
         'Authorization': 'Bearer ' + token,
         'Content-Type': 'application/json'
@@ -234,14 +234,14 @@ def process_payment():
     }
     
     payload = {
-        'ShortCode': '600984',
+        'ShortCode': '600977',
         'CommandID': 'CustomerBuyGoodsOnline',
         'amount': fare,
         'MSISDN': mobile_number,
         'BillRefNumber': ''
     }
     
-    response = requests.post('https://sandbox.safaricom.co.ke/mpesa/c2b/v1/simulate', headers=headers, json=payload)
+    response = requests.post(' https://sandbox.safaricom.co.ke/mpesa/c2b/v1/registerurl', headers=headers, json=payload)
     
     if response.status_code == 200:
         return jsonify({'success': True, 'message': 'Payment request sent successfully.'})
