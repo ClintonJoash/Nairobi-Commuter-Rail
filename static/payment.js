@@ -1,40 +1,54 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const paymentOption = document.getElementById('paymentOption');
-    const mobileMoneyDetails = document.getElementById('mobileMoneyDetails');
-    const paymentImages = {
-        creditCard: document.getElementById('creditCardImage'),
-        debitCard: document.getElementById('debitCardImage'),
-        mobileMoney: document.getElementById('mobileMoneyImage')
-    };
+    const creditCardOption = document.getElementById('creditCardOption');
+    const debitCardOption = document.getElementById('debitCardOption');
+    const mobileMoneyOption = document.getElementById('mobileMoneyOption');
 
-    // Show mobile money details when Mobile Money is selected
-    paymentOption.addEventListener('change', function() {
-        if (paymentOption.value === 'mobileMoney') {
-            mobileMoneyDetails.style.display = 'block';
-        } else {
-            mobileMoneyDetails.style.display = 'none';
-        }
-        updateSelectedImage(paymentOption.value);
+    const mobileMoneyDetails = document.getElementById('mobileMoneyDetails');
+    const creditCardDetails = document.getElementById('creditCardDetails');
+    const debitCardDetails = document.getElementById('debitCardDetails');
+
+    // Event listeners for payment option images
+    creditCardOption.addEventListener('click', function() {
+        showPaymentDetails('creditCard');
     });
 
-    // Handle form submission
-    document.getElementById('paymentForm').addEventListener('submit', function(event) {
+    debitCardOption.addEventListener('click', function() {
+        showPaymentDetails('debitCard');
+    });
+
+    mobileMoneyOption.addEventListener('click', function() {
+        showPaymentDetails('mobileMoney');
+    });
+
+    // Function to show payment details based on the selected option
+    function showPaymentDetails(option) {
+        mobileMoneyDetails.style.display = 'none';
+        creditCardDetails.style.display = 'none';
+        debitCardDetails.style.display = 'none';
+
+        if (option === 'mobileMoney') {
+            mobileMoneyDetails.style.display = 'block';
+        } else if (option === 'creditCard') {
+            creditCardDetails.style.display = 'block';
+        } else if (option === 'debitCard') {
+            debitCardDetails.style.display = 'block';
+        }
+    }
+
+    // Handle form submission for Mobile Money
+    document.getElementById('mobileMoneyForm').addEventListener('submit', function(event) {
         event.preventDefault();
-        const selectedPaymentMethod = paymentOption.value;
         const mobileNumber = document.getElementById('mobileNumber').value;
 
-        if (selectedPaymentMethod === 'mobileMoney' && !validateMobileNumber(mobileNumber)) {
+        if (!validateMobileNumber(mobileNumber)) {
             alert('Please enter a valid mobile number starting with 07 or 01 and containing exactly 10 digits.');
             return;
         }
 
-        // Process payment based on selected method
-        if (selectedPaymentMethod === 'mobileMoney') {
-            sendMobileMoneyPayment(mobileNumber);
-        } else {
-            alert('Payment processing for selected method is not implemented yet.');
-        }
+        sendMobileMoneyPayment(mobileNumber);
     });
+
+    // Add similar form submission handlers for credit and debit card forms here
 
     function validateMobileNumber(number) {
         // Validate mobile number format (10 digits starting with 07 or 01)
@@ -62,11 +76,5 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error:', error);
             alert('An error occurred while processing your payment. Please try again.');
         });
-    }
-
-    function updateSelectedImage(selectedMethod) {
-        for (let method in paymentImages) {
-            paymentImages[method].style.opacity = (method === selectedMethod) ? '1' : '0.5';
-        }
     }
 });

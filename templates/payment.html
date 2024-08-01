@@ -11,28 +11,37 @@
         <h1>Payment</h1>
     </header>
     <div class="container">
+        <h2>Total Fare: {{ fare }}</h2>
         <h2>Choose Your Payment Method</h2>
-        <form id="paymentForm">
-            <label for="paymentOption">Payment Method:</label>
-            <select id="paymentOption" name="paymentOption">
-                <option value="" disabled selected>Select Payment Method</option>
-                <option value="creditCard">Credit Card</option>
-                <option value="debitCard">Debit Card</option>
-                <option value="mobileMoney">Mobile Money</option>
-            </select>
-            
-            <!-- Payment details for Mobile Money -->
-            <div id="mobileMoneyDetails" style="display:none;">
+        <div class="payment-options">
+            <img src="{{ url_for('static', filename='credit_card.png') }}" id="creditCardOption" alt="Credit Card">
+            <img src="{{ url_for('static', filename='Debit card.jpeg') }}" id="debitCardOption" alt="Debit Card">
+            <img src="{{ url_for('static', filename='Mobile money.jpeg') }}" id="mobileMoneyOption" alt="Mobile Money">
+        </div>
+        
+        <!-- Payment details for Mobile Money -->
+        <div id="mobileMoneyDetails" style="display:none;">
+            <form id="mobileMoneyForm">
                 <label for="mobileNumber">Mobile Number:</label>
                 <input type="text" id="mobileNumber" name="mobileNumber" placeholder="e.g. 0712345678" maxlength="10">
-            </div>
-            
-            <button type="submit" class="button">Submit Payment</button>
-        </form>
-        <div class="payment-options">
-            <img src="{{ url_for('static', filename='credit_card.png') }}" alt="Credit Card" id="creditCardImage">
-            <img src="{{ url_for('static', filename='debit_card.png') }}" alt="Debit Card" id="debitCardImage">
-            <img src="{{ url_for('static', filename='mobile_money.png') }}" alt="Mobile Money" id="mobileMoneyImage">
+                <button type="submit" class="button">Submit Payment</button>
+            </form>
+        </div>
+        
+        <!-- Payment details for Credit Card (example) -->
+        <div id="creditCardDetails" style="display:none;">
+            <form id="creditCardForm">
+                <!-- Add Credit Card fields here -->
+                <button type="submit" class="button">Submit Payment</button>
+            </form>
+        </div>
+
+        <!-- Payment details for Debit Card (example) -->
+        <div id="debitCardDetails" style="display:none;">
+            <form id="debitCardForm">
+                <!-- Add Debit Card fields here -->
+                <button type="submit" class="button">Submit Payment</button>
+            </form>
         </div>
     </div>
     <script src="{{ url_for('static', filename='payment.js') }}"></script>
