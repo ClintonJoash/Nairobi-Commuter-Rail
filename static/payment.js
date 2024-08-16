@@ -39,13 +39,15 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('mobileMoneyForm').addEventListener('submit', function(event) {
         event.preventDefault();
         const mobileNumber = document.getElementById('mobileNumber').value;
+        const fare = document.getElementById('fare').value;
+        const bookingId = document.getElementById('bookingId').value;
 
         if (!validateMobileNumber(mobileNumber)) {
             alert('Please enter a valid mobile number starting with 07 or 01 and containing exactly 10 digits.');
             return;
         }
 
-        sendMobileMoneyPayment(mobileNumber);
+        sendMobileMoneyPayment(mobileNumber, fare, bookingId);
     });
 
     // Add similar form submission handlers for credit and debit card forms here
@@ -55,19 +57,19 @@ document.addEventListener('DOMContentLoaded', function() {
         return /^\b(07|01)\d{8}\b$/.test(number);
     }
 
-    function sendMobileMoneyPayment(number) {
+    function sendMobileMoneyPayment(number, fare, bookingId) {
         // Send request to the server to initiate M-Pesa payment
         fetch('/api/payment', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ mobileNumber: number })
+            body: JSON.stringify({ mobileNumber: number, fare: fare, bookingId: bookingId })
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('Payment request sent successfully. Check your mobile for further instructions.');
+                window.location.href = '/report/' + bookingId;
             } else {
                 alert('Failed to send payment request. Please try again.');
             }

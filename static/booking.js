@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (selectedRoute && selectedStop && fare) {
             localStorage.setItem('fare', fare);
-            window.location.href = '/payment';
+            window.location.href = '/payment?fare=' + fare;
         } else {
             alert('Please select a route and stop.');
         }

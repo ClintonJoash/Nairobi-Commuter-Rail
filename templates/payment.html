@@ -15,8 +15,8 @@
         <h2>Choose Your Payment Method</h2>
         <div class="payment-options">
             <img src="{{ url_for('static', filename='credit_card.png') }}" id="creditCardOption" alt="Credit Card">
-            <img src="{{ url_for('static', filename='Debit card.jpeg') }}" id="debitCardOption" alt="Debit Card">
-            <img src="{{ url_for('static', filename='Mobile money.jpeg') }}" id="mobileMoneyOption" alt="Mobile Money">
+            <img src="{{ url_for('static', filename='debit_card.png') }}" id="debitCardOption" alt="Debit Card">
+            <img src="{{ url_for('static', filename='mobile_money.png') }}" id="mobileMoneyOption" alt="Mobile Money">
         </div>
         
         <!-- Payment details for Mobile Money -->
@@ -24,6 +24,8 @@
             <form id="mobileMoneyForm">
                 <label for="mobileNumber">Mobile Number:</label>
                 <input type="text" id="mobileNumber" name="mobileNumber" placeholder="e.g. 0712345678" maxlength="10">
+                <input type="hidden" id="fare" name="fare" value="{{ fare }}">
+                <input type="hidden" id="bookingId" name="bookingId" value="{{ booking_id }}">
                 <button type="submit" class="button">Submit Payment</button>
             </form>
         </div>
