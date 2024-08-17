@@ -5,6 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Payment</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+        .mpesa-logo {
+            width: 100px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        .mpesa-logo:hover {
+            transform: scale(1.1);
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -12,40 +22,30 @@
     </header>
     <div class="container">
         <h2>Total Fare: {{ fare }}</h2>
-        <h2>Choose Your Payment Method</h2>
-        <div class="payment-options">
-            <img src="{{ url_for('static', filename='credit_card.png') }}" id="creditCardOption" alt="Credit Card">
-            <img src="{{ url_for('static', filename='debit_card.png') }}" id="debitCardOption" alt="Debit Card">
-            <img src="{{ url_for('static', filename='mobile_money.png') }}" id="mobileMoneyOption" alt="Mobile Money">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul class="flashes">
+                {% for category, message in messages %}
+                    <li class="{{ category }}">{{ message }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+        <div>
+            <img src="{{ url_for('static', filename='mpesa-logo.png') }}" alt="M-Pesa Logo" class="mpesa-logo" onclick="showPaymentForm()">
         </div>
-        
-        <!-- Payment details for Mobile Money -->
-        <div id="mobileMoneyDetails" style="display:none;">
-            <form id="mobileMoneyForm">
-                <label for="mobileNumber">Mobile Number:</label>
-                <input type="text" id="mobileNumber" name="mobileNumber" placeholder="e.g. 0712345678" maxlength="10">
-                <input type="hidden" id="fare" name="fare" value="{{ fare }}">
-                <input type="hidden" id="bookingId" name="bookingId" value="{{ booking_id }}">
-                <button type="submit" class="button">Submit Payment</button>
-            </form>
-        </div>
-        
-        <!-- Payment details for Credit Card (example) -->
-        <div id="creditCardDetails" style="display:none;">
-            <form id="creditCardForm">
-                <!-- Add Credit Card fields here -->
-                <button type="submit" class="button">Submit Payment</button>
-            </form>
-        </div>
-
-        <!-- Payment details for Debit Card (example) -->
-        <div id="debitCardDetails" style="display:none;">
-            <form id="debitCardForm">
-                <!-- Add Debit Card fields here -->
-                <button type="submit" class="button">Submit Payment</button>
-            </form>
-        </div>
+        <form id="paymentForm" method="POST" action="{{ url_for('payment') }}" style="display:none;">
+            <label for="phone_number">Phone Number (Format: 2547XXXXXXXX):</label>
+            <input type="text" id="phone_number" name="phone_number" placeholder="e.g. 254712345678" maxlength="12" required>
+            <input type="hidden" name="fare" value="{{ fare }}">
+            <input type="hidden" name="booking_id" value="{{ booking_id }}">
+            <button type="submit" class="button">Submit Payment</button>
+        </form>
     </div>
-    <script src="{{ url_for('static', filename='payment.js') }}"></script>
+    <script>
+        function showPaymentForm() {
+            document.getElementById('paymentForm').style.display = 'block';
+        }
+    </script>
 </body>
 </html>

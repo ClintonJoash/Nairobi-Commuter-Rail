@@ -1,6 +1,6 @@
 import sqlite3
 import csv
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
 import requests
 import base64
 from datetime import datetime
@@ -12,6 +12,9 @@ app.secret_key = '6f64c4e71bf4f967ae9a85c281291083'
 # Safaricom API credentials
 CONSUMER_KEY = '5LyZXmj0n4SJADkXLtskKv4wd0BocvkuuI0aZmZGTGVVl88f'
 CONSUMER_SECRET = 'QvAy9gmLz80hA65ZF1HzDstxe2LXJmBGAZoz3uOXkwiWlNVDvTHKuaEKaGROGV38'
+BUSINESS_SHORT_CODE = '174379'
+PASSKEY = 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919'
+CALLBACK_URL = 'http://127.0.0.1.com/5000'
 
 # Path to login attempts CSV file
 LOGIN_ATTEMPTS_FILE = 'login_attempts.csv'
@@ -62,6 +65,8 @@ def init_db():
             fare REAL,
             payment_method TEXT,
             payment_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            phone_number TEXT,
+            payment_status TEXT DEFAULT 'pending',
             FOREIGN KEY (booking_id) REFERENCES bookings (id)
         )
     ''')
@@ -104,10 +109,12 @@ def register():
         cursor.execute('INSERT INTO commuters (name, contact_info) VALUES (?, ?)', (name, contact_info))
         conn.commit()
         conn.close()
-        return 'Registration successful! <a href="/">Back to Home</a>'
+        flash('Registration successful!', 'success')
+        return redirect(url_for('index'))
     except sqlite3.IntegrityError:
         conn.close()
-        return 'Error: Commuter already registered <a href="/">Back to Home</a>'
+        flash('Error: Commuter already registered', 'error')
+        return redirect(url_for('register_form'))
 
 # Route to display the login form
 @app.route('/login', methods=['GET'])
@@ -121,7 +128,8 @@ def login():
     contact_info = request.form.get('contact_info')
     
     if not name or not contact_info:
-        return render_template('login.html', error='Both fields are required.')
+        flash('Both fields are required.', 'error')
+        return render_template('login.html')
     
     conn = sqlite3.connect('commuters.db')
     cursor = conn.cursor()
@@ -136,12 +144,12 @@ def login():
         cursor.execute('INSERT INTO login_attempts (user_id) VALUES (?)', (commuter[0],))
         conn.commit()
         conn.close()
-        
         return redirect(url_for('booking'))
     else:
         log_login_attempt(name, 'unsuccessful')
         conn.close()
-        return render_template('login.html', error='Invalid credentials')
+        flash('Invalid credentials.', 'error')
+        return render_template('login.html')
 
 # Route to display the booking page
 @app.route('/booking', methods=['GET', 'POST'])
@@ -152,7 +160,8 @@ def booking():
         fare = request.form['fare']
         
         if not route or not stop or not fare:
-            return render_template('booking.html', error='All fields are required.')
+            flash('All fields are required.', 'error')
+            return render_template('booking.html')
 
         # Save booking info to the database
         conn = sqlite3.connect('commuters.db')
@@ -175,19 +184,47 @@ def payment():
         fare = request.form['fare']
         booking_id = request.form['booking_id']
         
-        if not phone_number or not phone_number.isdigit() or len(phone_number) != 10 or not (phone_number.startswith('07') or phone_number.startswith('01')):
-            return render_template('payment.html', error='Invalid phone number.', fare=fare, booking_id=booking_id)
+        # Validate phone number format
+        if not phone_number.startswith('254') or len(phone_number) != 12 or not phone_number.isdigit():
+            flash('Invalid phone number. It must be in the format 2547XXXXXXXX.', 'error')
+            return render_template('payment.html', fare=fare, booking_id=booking_id)
         
-        # Make payment request to Safaricom API
         try:
+            # Initiate payment
             token = get_access_token()
             response = initiate_payment(token, phone_number, fare, booking_id)
-            if response.status_code == 200:
-                return redirect(url_for('report', booking_id=booking_id))
+
+            # Determine payment status
+            payment_status = 'Completed' if response.get("ResponseCode") == "0" else 'Pending'
+            
+            # Save payment information to the database
+            conn = sqlite3.connect('commuters.db')
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO payments (booking_id, fare, payment_method, phone_number, payment_status)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (booking_id, fare, 'mobile_money', phone_number, payment_status))
+            conn.commit()
+            conn.close()
+
+            # Show a flash message for the outcome
+            if payment_status == 'Completed':
+                flash('Payment successful!', 'success')
             else:
-                return render_template('payment.html', error='Payment request failed.', fare=fare, booking_id=booking_id)
+                flash('Payment request failed. Please try again.', 'error')
+            
+            return redirect(url_for('report', booking_id=booking_id))
+        except requests.exceptions.HTTPError as http_err:
+            flash(f'HTTP error occurred: {http_err}', 'error')
+            print(f"HTTP error occurred: {http_err}")
+            print(f"Response content: {http_err.response.content}")
+        except requests.exceptions.RequestException as req_err:
+            flash(f'Request error occurred: {req_err}', 'error')
+            print(f"Request error occurred: {req_err}")
         except Exception as e:
-            return render_template('payment.html', error=f'Error: {str(e)}', fare=fare, booking_id=booking_id)
+            flash(f'An error occurred: {str(e)}', 'error')
+            print(f"An error occurred: {str(e)}")
+        return render_template('payment.html', fare=fare, booking_id=booking_id)
 
     fare = request.args.get('fare', '')
     booking_id = request.args.get('booking_id', '')
@@ -208,95 +245,69 @@ def get_access_token():
 
 # Function to initiate payment request to Safaricom API
 def initiate_payment(token, phone_number, fare, booking_id):
-    api_url = ' https://sandbox.safaricom.co.ke/mpesa/c2b/v1/registerurl'
+    api_url = 'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest'
     headers = {
         'Authorization': 'Bearer ' + token,
         'Content-Type': 'application/json'
     }
     
     timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    shortcode = '174379'
-    lipa_na_mpesa_online_passkey = 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919'
-    password = base64.b64encode((shortcode + lipa_na_mpesa_online_passkey + timestamp).encode()).decode('utf-8')
+    password = base64.b64encode((BUSINESS_SHORT_CODE + PASSKEY + timestamp).encode()).decode('utf-8')
+    
+    # Ensure amount is an integer
+    fare = int(fare)
     
     payload = {
-        'BusinessShortCode': 174379,
+        'BusinessShortCode': BUSINESS_SHORT_CODE,
         'Password': password,
         'Timestamp': timestamp,
         'TransactionType': 'CustomerPayBillOnline',
         'Amount': fare,
-        'PartyA': phone_number,
-        'PartyB': shortcode,
+        'PartyA': phone_number,  # Phone number already validated
+        'PartyB': BUSINESS_SHORT_CODE,
         'PhoneNumber': phone_number,
-        'CallBackURL': 'https://your.callback.url/confirm',
-        'AccountReference': 'Nairobi Commuter',
-        'TransactionDesc': 'Nairobi Commuter Rail Ticket'
+        'CallBackURL': CALLBACK_URL,
+        'AccountReference': 'NCR',
+        'TransactionDesc': 'NCR Ticket'
     }
-    
-    response = requests.post(api_url, json=payload, headers=headers)
-    
-    # If payment is successful, record the payment in the database
-    if response.status_code == 200:
-        conn = sqlite3.connect('commuters.db')
-        cursor = conn.cursor()
-        cursor.execute('UPDATE bookings SET payment_status = ? WHERE id = ?', ('paid', booking_id))
-        cursor.execute('INSERT INTO payments (booking_id, fare, payment_method) VALUES (?, ?, ?)',
-                       (booking_id, fare, 'mobile_money'))
-        conn.commit()
-        conn.close()
-    
-    return response
 
-@app.route('/api/payment', methods=['POST'])
-def process_payment():
-    data = request.json
-    mobile_number = data.get('mobileNumber')
-    fare = data.get('fare')
-    booking_id = data.get('bookingId')  # Make sure to pass bookingId
+    # Log the full payload and headers
+    print("Sending STK Push request with headers:")
+    print(headers)
+    print("Payload:")
+    print(payload)
     
-    # ... existing payment processing logic ...
+    try:
+        response = requests.post(api_url, json=payload, headers=headers)
+        response.raise_for_status()  # Raises an HTTPError if the response status code is 4xx or 5xx
+        response_data = response.json()
+        print("Safaricom API Response:")
+        print(response_data)
+        return response_data
+    except requests.exceptions.HTTPError as http_err:
+        print(f"HTTP error occurred: {http_err}")
+        print(f"Response content: {http_err.response.content}")
+        raise
+    except requests.exceptions.RequestException as req_err:
+        print(f"Request error occurred: {req_err}")
+        raise
+    except Exception as err:
+        print(f"An unexpected error occurred: {err}")
+        raise
 
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': f'Bearer {get_access_token()}'
-    }
-    
-    payload = {
-        'ShortCode': '600977',
-        'CommandID': 'CustomerBuyGoodsOnline',
-        'amount': fare,
-        'MSISDN': mobile_number,
-        'BillRefNumber': ''
-    }
-    
-    response = requests.post('https://sandbox.safaricom.co.ke/mpesa/c2b/v1/simulate', headers=headers, json=payload)
-    
-    if response.status_code == 200:
-        # Update the payment status in the bookings table
-        conn = sqlite3.connect('commuters.db')
-        cursor = conn.cursor()
-        cursor.execute('UPDATE bookings SET payment_status = ? WHERE id = ?', ('paid', booking_id))
-        cursor.execute('INSERT INTO payments (booking_id, fare, payment_method) VALUES (?, ?, ?)',
-                       (booking_id, fare, 'mobile_money'))
-        conn.commit()
-        conn.close()
-        return jsonify({'success': True, 'message': 'Payment request sent successfully.', 'booking_id': booking_id})
-    else:
-        return jsonify({'success': False, 'message': 'An error occurred while making the payment.'})
-
-# Route to generate the report after successful payment
+# Route to generate the report after payment attempt
 @app.route('/report/<int:booking_id>', methods=['GET'])
 def report(booking_id):
     conn = sqlite3.connect('commuters.db')
     cursor = conn.cursor()
     
-    # Retrieve booking and commuter information
+    # Retrieve booking and payment information
     cursor.execute('''
-        SELECT c.name, b.route, b.stop, p.fare, p.payment_method, p.payment_time
+        SELECT c.name, p.phone_number, b.stop, p.payment_status
         FROM commuters c
         JOIN bookings b ON c.id = b.user_id
         JOIN payments p ON b.id = p.booking_id
-        WHERE b.id = ? AND b.payment_status = 'paid'
+        WHERE b.id = ?
     ''', (booking_id,))
     
     report_data = cursor.fetchone()
@@ -305,7 +316,8 @@ def report(booking_id):
     if report_data:
         return render_template('report.html', report=report_data)
     else:
-        return 'No report found for this booking.'
+        flash('No report found for this booking.', 'error')
+        return redirect(url_for('index'))
 
 # Route to display login attempts
 @app.route('/login_attempts')
