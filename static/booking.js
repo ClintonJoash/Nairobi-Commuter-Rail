@@ -68,8 +68,25 @@ document.addEventListener('DOMContentLoaded', function() {
         var fare = fareInput.value;
 
         if (selectedRoute && selectedStop && fare) {
-            localStorage.setItem('fare', fare);
-            window.location.href = '/payment?fare=' + fare;
+            // Perform form submission via AJAX to get the booking ID
+            var formData = new FormData(this);
+            fetch('/booking', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    localStorage.setItem('fare', fare);
+                    window.location.href = '/payment?fare=' + fare + '&booking_id=' + data.booking_id;
+                } else {
+                    alert('Failed to create booking. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.');
+            });
         } else {
             alert('Please select a route and stop.');
         }

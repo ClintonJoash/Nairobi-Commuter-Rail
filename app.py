@@ -73,6 +73,60 @@ def init_db():
     conn.commit()
     conn.close()
 
+# Function to get access token from Safaricom API
+def get_access_token():
+    api_url = 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials'
+    
+    # Generate base64 encoded credentials
+    credentials = f"{CONSUMER_KEY}:{CONSUMER_SECRET}"
+    encoded_credentials = base64.b64encode(credentials.encode()).decode('utf-8')
+
+    headers = {
+        'Authorization': f'Basic {encoded_credentials}',
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+    
+    response = requests.get(api_url, headers=headers)
+    
+    if response.status_code == 200:
+        response_data = response.json()
+        return response_data['access_token']
+    else:
+        raise Exception(f"Failed to get access token: {response.status_code}, {response.text}")
+
+# Function to initiate payment request to Safaricom API
+def initiate_payment(token, phone_number, fare, booking_id):
+    api_url = 'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest'
+    
+    headers = {
+        'Authorization': f'Bearer {token}',
+        'Content-Type': 'application/json'
+    }
+    
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    password = base64.b64encode((BUSINESS_SHORT_CODE + PASSKEY + timestamp).encode()).decode('utf-8')
+    
+    payload = {
+        'BusinessShortCode': BUSINESS_SHORT_CODE,
+        'Password': password,
+        'Timestamp': timestamp,
+        'TransactionType': 'CustomerPayBillOnline',
+        'Amount': int(float(fare)),
+        'PartyA': phone_number,
+        'PartyB': BUSINESS_SHORT_CODE,
+        'PhoneNumber': phone_number,
+        'CallBackURL': CALLBACK_URL,
+        'AccountReference': f'NCR Booking Ticket{booking_id}',
+        'TransactionDesc': 'Payment for booking'
+    }
+
+    response = requests.post(api_url, json=payload, headers=headers)
+    
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise Exception(f"Failed to initiate payment: {response.status_code}, {response.text}")
+
 # Log login attempt
 def log_login_attempt(username, status):
     with open(LOGIN_ATTEMPTS_FILE, 'a', newline='') as csvfile:
@@ -160,19 +214,23 @@ def booking():
         fare = request.form['fare']
         
         if not route or not stop or not fare:
-            flash('All fields are required.', 'error')
-            return render_template('booking.html')
+            return jsonify(success=False, error='All fields are required.')
 
         # Save booking info to the database
         conn = sqlite3.connect('commuters.db')
         cursor = conn.cursor()
-        cursor.execute('INSERT INTO bookings (user_id, route, stop, fare) VALUES (?, ?, ?, ?)', 
-                       (session['user_id'], route, stop, fare))
-        conn.commit()
+        cursor.execute('''
+            INSERT INTO bookings (user_id, route, stop, fare) 
+            VALUES (?, ?, ?, ?)''', 
+            (session['user_id'], route, stop, fare))
+        
+        # Automatically generated booking_id
         booking_id = cursor.lastrowid
+        conn.commit()
         conn.close()
         
-        return redirect(url_for('payment', fare=fare, booking_id=booking_id))
+        print(f"Generated Booking ID: {booking_id}")  # Debugging: Print the booking ID
+        return jsonify(success=True, booking_id=booking_id)
     
     return render_template('booking.html')
 
@@ -207,13 +265,9 @@ def payment():
             conn.commit()
             conn.close()
 
-            # Show a flash message for the outcome
-            if payment_status == 'Completed':
-                flash('Payment successful!', 'success')
-            else:
-                flash('Payment request failed. Please try again.', 'error')
-            
-            return redirect(url_for('report', booking_id=booking_id))
+            # Provide feedback and redirect to report page after confirmation
+            flash('Payment initiated successfully!', 'success')
+            return jsonify({'success': True, 'booking_id': booking_id})
         except requests.exceptions.HTTPError as http_err:
             flash(f'HTTP error occurred: {http_err}', 'error')
             print(f"HTTP error occurred: {http_err}")
@@ -224,76 +278,16 @@ def payment():
         except Exception as e:
             flash(f'An error occurred: {str(e)}', 'error')
             print(f"An error occurred: {str(e)}")
-        return render_template('payment.html', fare=fare, booking_id=booking_id)
+        return jsonify({'success': False})
 
     fare = request.args.get('fare', '')
     booking_id = request.args.get('booking_id', '')
+
+    if not booking_id:
+        flash('Booking ID is missing. Please try again.', 'error')
+        return redirect(url_for('booking'))
+
     return render_template('payment.html', fare=fare, booking_id=booking_id)
-
-# Function to get access token from Safaricom API
-def get_access_token():
-    api_url = 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials'
-    
-    headers = {
-        'Authorization': 'Basic ' + base64.b64encode(f"{CONSUMER_KEY}:{CONSUMER_SECRET}".encode()).decode('utf-8'),
-        'Content-Type': 'application/x-www-form-urlencoded'
-    }
-    
-    response = requests.get(api_url, headers=headers)
-    response_data = response.json()
-    return response_data['access_token']
-
-# Function to initiate payment request to Safaricom API
-def initiate_payment(token, phone_number, fare, booking_id):
-    api_url = 'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest'
-    headers = {
-        'Authorization': 'Bearer ' + token,
-        'Content-Type': 'application/json'
-    }
-    
-    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-    password = base64.b64encode((BUSINESS_SHORT_CODE + PASSKEY + timestamp).encode()).decode('utf-8')
-    
-    # Ensure amount is an integer
-    fare = int(fare)
-    
-    payload = {
-        'BusinessShortCode': BUSINESS_SHORT_CODE,
-        'Password': password,
-        'Timestamp': timestamp,
-        'TransactionType': 'CustomerPayBillOnline',
-        'Amount': fare,
-        'PartyA': phone_number,  # Phone number already validated
-        'PartyB': BUSINESS_SHORT_CODE,
-        'PhoneNumber': phone_number,
-        'CallBackURL': CALLBACK_URL,
-        'AccountReference': 'NCR',
-        'TransactionDesc': 'NCR Ticket'
-    }
-
-    # Log the full payload and headers
-    print("Sending STK Push request with headers:")
-    print(headers)
-    print("Payload:")
-    print(payload)
-    
-    try:
-        response = requests.post(api_url, json=payload, headers=headers)
-        response.raise_for_status()  # Raises an HTTPError if the response status code is 4xx or 5xx
-        response_data = response.json()
-        print("Safaricom API Response:")
-        print(response_data)
-        return response_data
-    except requests.exceptions.HTTPError as http_err:
-        print(f"HTTP error occurred: {http_err}")
-        print(f"Response content: {http_err.response.content}")
-        raise
-    except requests.exceptions.RequestException as req_err:
-        print(f"Request error occurred: {req_err}")
-        raise
-    except Exception as err:
-        print(f"An unexpected error occurred: {err}")
-        raise
 
 # Route to generate the report after payment attempt
 @app.route('/report/<int:booking_id>', methods=['GET'])
@@ -313,6 +307,9 @@ def report(booking_id):
     report_data = cursor.fetchone()
     conn.close()
 
+    # Debugging: Print the fetched report data
+    print("Report Data:", report_data)
+
     if report_data:
         return render_template('report.html', report=report_data)
     else:
@@ -329,5 +326,37 @@ def login_attempts():
             attempts.append(row)
     return jsonify(attempts)
 
+# API Route to handle STK push request
+@app.route('/api/payment', methods=['POST'])
+def api_payment():
+    data = request.json
+    phone_number = data.get('phoneNumber')
+    fare = data.get('fare')
+    booking_id = data.get('bookingId')
+
+    try:
+        # Initiate payment using the previously defined function
+        token = get_access_token()
+        response = initiate_payment(token, phone_number, fare, booking_id)
+
+        # Determine payment status
+        payment_status = 'Completed' if response.get("ResponseCode") == "0" else 'Pending'
+        
+        # Save payment information to the database
+        conn = sqlite3.connect('commuters.db')
+        cursor = conn.cursor()
+        cursor.execute('''
+            INSERT INTO payments (booking_id, fare, payment_method, phone_number, payment_status)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (booking_id, fare, 'mobile_money', phone_number, payment_status))
+        conn.commit()
+        conn.close()
+
+        # Return a success response
+        return jsonify(success=True)
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify(success=False), 500
+
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True)  # Make sure to run Flask in debug mode

@@ -13,7 +13,7 @@
     <div class="container">
         <form id="bookingForm" method="POST" action="{{ url_for('booking') }}">
             <label for="route">Route</label>
-            <select id="route" name="route" required onchange="populateStopsDropdown(this.value)">
+            <select id="route" name="route" required>
                 <option value="" disabled selected>Select Route</option>
                 <option value="Nairobi-Embakasi village">Nairobi-Embakasi village</option>
                 <option value="Nairobi-Syokimau">Nairobi-Syokimau</option>
@@ -22,7 +22,7 @@
                 <option value="Nairobi-Lukenya">Nairobi-Lukenya</option>
             </select>
             <label for="stop">Stop</label>
-            <select id="stop" name="stop" required onchange="updateFare()">
+            <select id="stop" name="stop" required>
                 <option value="" disabled selected>Select Stop</option>
             </select>
             <label for="fare">Fare</label>

@@ -34,17 +34,49 @@
         <div>
             <img src="{{ url_for('static', filename='mpesa-logo.png') }}" alt="M-Pesa Logo" class="mpesa-logo" onclick="showPaymentForm()">
         </div>
-        <form id="paymentForm" method="POST" action="{{ url_for('payment') }}" style="display:none;">
+        <form id="paymentForm" style="display:none;">
             <label for="phone_number">Phone Number (Format: 2547XXXXXXXX):</label>
             <input type="text" id="phone_number" name="phone_number" placeholder="e.g. 254712345678" maxlength="12" required>
-            <input type="hidden" name="fare" value="{{ fare }}">
-            <input type="hidden" name="booking_id" value="{{ booking_id }}">
-            <button type="submit" class="button">Submit Payment</button>
+            <input type="hidden" id="fare" name="fare" value="{{ fare }}">
+            <input type="hidden" id="booking_id" name="booking_id" value="{{ booking_id }}">
+            <button type="button" class="button" onclick="submitPayment()">Submit Payment</button>
         </form>
     </div>
     <script>
         function showPaymentForm() {
             document.getElementById('paymentForm').style.display = 'block';
+        }
+
+        function submitPayment() {
+            const phoneNumber = document.getElementById('phone_number').value;
+            const fare = document.getElementById('fare').value;
+            const bookingId = document.getElementById('booking_id').value;
+
+            if (!bookingId) {
+                alert('Booking ID is missing. Please try again.');
+                return;
+            }
+
+            fetch('/api/payment', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ phoneNumber: phoneNumber, fare: fare, bookingId: bookingId })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Payment has been initiated. Please check your phone for the payment prompt.');
+                    window.location.href = `/report/${bookingId}`;
+                } else {
+                    alert('Failed to initiate payment. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while processing your payment. Please try again.');
+            });
         }
     </script>
 </body>
