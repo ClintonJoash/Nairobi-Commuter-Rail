@@ -167,7 +167,7 @@ def register():
         return redirect(url_for('index'))
     except sqlite3.IntegrityError:
         conn.close()
-        flash('Error: Commuter already registered', 'error')
+        flash('Ooops: Commuter already registered', 'error')
         return redirect(url_for('register_form'))
 
 # Route to display the login form
@@ -253,7 +253,7 @@ def payment():
             response = initiate_payment(token, phone_number, fare, booking_id)
 
             # Determine payment status
-            payment_status = 'Completed' if response.get("ResponseCode") == "0" else 'Pending'
+            payment_status = 'Pending' if response.get("ResponseCode") == "0" else 'Completed'
             
             # Save payment information to the database
             conn = sqlite3.connect('commuters.db')
