@@ -356,7 +356,7 @@ def api_payment():
         return jsonify(success=True)
     except Exception as e:
         print(f"Error: {e}")
-        return jsonify(success=False), 500
+        return jsonify(success=Fals), 500
 
 if __name__ == '__main__':
     app.run(debug=True)  # Make sure to run Flask in debug mode
