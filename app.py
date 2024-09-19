@@ -352,7 +352,7 @@ def api_payment():
         conn.commit()
         conn.close()
 
-        # Return a success respons
+        # Return a success response
         return jsonify(success=True)
     except Exception as e:
         print(f"Error: {e}")
