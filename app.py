@@ -71,7 +71,7 @@ def init_db():
         )
     ''')
     conn.commit()
-    conn.close(
+    conn.close()
 
 # Function to get access token from Safaricom API
 def get_access_token():
